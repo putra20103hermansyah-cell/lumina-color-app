@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LUMINA | Advanced Liquid Color Intelligence</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@200;400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.4);
+            --liquid-border: linear-gradient(135deg, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0.1) 100%);
+            --accent-glow: rgba(59, 130, 246, 0.15);
+        }
+
+        body {
+            background: #f8fafc;
+            color: #0f172a;
+            min-height: 100vh;
+            overflow-x: hidden;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        /* Elemen Latar Belakang Fluid */
+        .blob {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            filter: blur(80px);
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+
+        #cursor-trail {
+            position: fixed;
+            width: 15px;
+            height: 15px;
+            background: #3b82f6;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 999;
+            mix-blend-mode: difference;
+            transition: transform 0.1s ease;
+        }
+
+        /* Sistem Kartu Liquid Glass */
+        .liquid-glass {
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border: 1px solid transparent;
+            border-image: var(--liquid-border) 1;
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+            border-radius: 24px;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .liquid-glass:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.6);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Gaya Slider */
+        .slider-container {
+            display: flex;
+            gap: 2rem;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding: 2rem 0;
+            scrollbar-width: none; /* Firefox */
+            scroll-behavior: smooth;
+        }
+
+        .slider-container::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
+
+        .slider-item {
+            min-width: 350px;
+            scroll-snap-align: center;
+        }
+
+        .color-block:hover::after {
+            content: attr(data-name);
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .modal-active { opacity: 1 !important; pointer-events: auto !important; transform: scale(1) !important; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Latar Belakang Fluid -->
+    <div id="blob-1" class="blob" style="top: -100px; left: -100px;"></div>
+    <div id="blob-2" class="blob" style="bottom: -100px; right: -100px; background: radial-gradient(circle, rgba(16, 185, 129, 0.1) 0%, transparent 70%);"></div>
+    <div id="cursor-glow" class="blob" style="width: 300px; height: 300px; background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%); opacity: 0;"></div>
+    <div id="cursor-trail"></div>
+
+    <!-- Navigasi -->
+    <nav class="fixed top-0 w-full z-50 px-6 py-4">
+        <div class="max-w-7xl mx-auto liquid-glass px-8 py-4 flex items-center justify-between !border-none">
+            <div class="flex items-center gap-3 font-heading font-extrabold text-2xl tracking-tighter text-slate-900 group cursor-pointer" onclick="window.scrollTo({top:0, behavior:'smooth'})">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-blue-500 to-emerald-400 group-hover:rotate-12 transition-transform"></div>
+                LUMINA
+            </div>
+            
+            <div class="hidden md:flex items-center gap-10">
+                <a href="#vision" class="text-xs font-extrabold uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">AI Vision</a>
+                <a href="#library" class="text-xs font-extrabold uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">Collections</a>
+                <a href="#ecosystem" class="text-xs font-extrabold uppercase tracking-widest text-slate-500 hover:text-indigo-600 transition-colors">Ecosystem</a>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button onclick="openModal('creator-modal')" class="p-3 rounded-full bg-slate-900 text-white hover:scale-110 transition-transform shadow-xl">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="min-h-screen flex flex-col items-center justify-center text-center px-6 pt-20">
+        <div class="liquid-glass px-4 py-2 mb-8 inline-flex items-center gap-2">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+            </span>
+            <span class="text-[10px] font-extrabold tracking-widest uppercase text-slate-600">Liquid Intelligence v2.0</span>
+        </div>
+        <h1 class="text-7xl md:text-9xl font-heading font-black tracking-tighter leading-none mb-8 text-slate-900">
+            Design with <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-blue-500 to-emerald-500">Fluid Clarity.</span>
+        </h1>
+        <p class="max-w-2xl text-slate-500 font-medium text-lg md:text-xl mb-12">
+            Infrastruktur warna profesional yang didukung oleh AI. Navigasikan spektrum dengan kecerdasan visual tingkat lanjut dan estetika liquid glass.
+        </p>
+        <div class="flex flex-wrap justify-center gap-6">
+            <button onclick="document.getElementById('vision').scrollIntoView({behavior:'smooth'})" class="px-10 py-5 bg-slate-900 text-white rounded-2xl font-bold shadow-2xl hover:scale-105 transition-all">Explore AI Engine</button>
+            <button onclick="document.getElementById('library').scrollIntoView({behavior:'smooth'})" class="px-10 py-5 liquid-glass font-bold hover:bg-white/60 transition-all">Browse Library</button>
+        </div>
+    </section>
+
+    <!-- Fitur Utama -->
+    <section class="max-w-7xl mx-auto px-6 py-32 grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div class="liquid-glass p-12 group">
+            <i data-lucide="brain-circuit" class="w-10 h-10 text-indigo-500 mb-8"></i>
+            <h3 class="text-2xl font-bold mb-4 font-heading">Analisis AI</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">Pemrosesan jaringan saraf untuk mengekstrak DNA estetika dari konten visual apa pun.</p>
+        </div>
+        <div class="liquid-glass p-12 group">
+            <i data-lucide="palette" class="w-10 h-10 text-blue-500 mb-8"></i>
+            <h3 class="text-2xl font-bold mb-4 font-heading">Koleksi Pro</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">Pilihan kurasi dari 25 skema warna kelas industri dengan penamaan profesional.</p>
+        </div>
+        <div class="liquid-glass p-12 group">
+            <i data-lucide="sparkles" class="w-10 h-10 text-emerald-500 mb-8"></i>
+            <h3 class="text-2xl font-bold mb-4 font-heading">Brankas Pribadi</h3>
+            <p class="text-slate-500 text-sm leading-relaxed">Penyimpanan lokal untuk palet kustom dan identitas merek yang Anda buat.</p>
+        </div>
+    </section>
+
+    <!-- AI Vision Section -->
+    <section id="vision" class="max-w-7xl mx-auto px-6 py-32">
+        <div class="liquid-glass rounded-[48px] overflow-hidden grid grid-cols-1 lg:grid-cols-2">
+            <div class="p-16">
+                <h2 class="text-4xl font-heading font-extrabold mb-4">Vision Engine</h2>
+                <p class="text-slate-500 mb-10">Unggah gambar untuk mengekstrak struktur kromatik intinya.</p>
+                <div id="drop-zone" class="aspect-video rounded-3xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:border-indigo-500 transition-all group overflow-hidden relative">
+                    <input type="file" id="ai-upload" class="hidden" accept="image/*">
+                    <div id="drop-content" class="text-center group-hover:scale-110 transition-transform">
+                        <i data-lucide="image-plus" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+                        <p class="text-xs font-bold uppercase tracking-widest text-slate-400">Import Image</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white/20 p-16 flex flex-col justify-center border-l border-white/40">
+                <div id="ai-placeholder" class="text-center text-slate-400 py-10 italic text-sm">System ready for analysis...</div>
+                <div id="ai-content" class="hidden space-y-10">
+                    <div id="ai-palette-result" class="flex h-32 rounded-3xl overflow-hidden shadow-2xl scale-95 hover:scale-100 transition-transform"></div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <h4 class="text-xs font-extrabold uppercase tracking-widest text-slate-400">Analysis Summary</h4>
+                        </div>
+                        <p id="ai-explanation" class="text-slate-600 leading-relaxed font-medium"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Master Library Section -->
+    <section id="library" class="max-w-7xl mx-auto px-6 py-32">
+        <div class="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+            <div>
+                <h2 class="text-5xl font-heading font-black mb-4">Master Library</h2>
+                <p class="text-slate-500 font-medium italic">"25 Konfigurasi kromatik elit untuk desain modern."</p>
+            </div>
+            <div id="mood-filters" class="flex flex-wrap gap-2"></div>
+        </div>
+        <div id="palette-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"></div>
+    </section>
+
+    <!-- Vault Preview -->
+    <section id="vault" class="max-w-7xl mx-auto px-6 py-32">
+        <div class="liquid-glass p-12 !border-none bg-indigo-600 text-white relative overflow-hidden">
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div>
+                    <h2 class="text-4xl font-heading font-extrabold mb-2 text-white">Personal Vault</h2>
+                    <p class="text-indigo-100 font-medium">Simpan palet kustom Anda dengan aman di sini.</p>
+                </div>
+                <button onclick="openModal('creator-modal')" class="px-10 py-5 bg-white text-indigo-600 rounded-2xl font-bold hover:scale-105 transition-all shadow-xl">Craft New Palette</button>
+            </div>
+            <div class="absolute -right-20 -top-20 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        </div>
+        <div id="my-palettes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mt-12"></div>
+    </section>
+
+    <!-- Ecosystem Information Slider -->
+    <section id="ecosystem" class="py-32 overflow-hidden bg-slate-50/50">
+        <div class="max-w-7xl mx-auto px-6 mb-16">
+            <h2 class="text-5xl font-heading font-black mb-4 tracking-tighter">Lumina Ecosystem</h2>
+            <p class="text-slate-500 font-medium">Memahami filosofi di balik kecerdasan warna fluid.</p>
+        </div>
+
+        <div class="relative max-w-full">
+            <!-- Tombol Navigasi -->
+            <button onclick="scrollSlider('left')" class="absolute left-10 top-1/2 -translate-y-1/2 z-20 p-4 liquid-glass hover:bg-white hover:scale-110 transition-all shadow-xl hidden md:block">
+                <i data-lucide="chevron-left"></i>
+            </button>
+            <button onclick="scrollSlider('right')" class="absolute right-10 top-1/2 -translate-y-1/2 z-20 p-4 liquid-glass hover:bg-white hover:scale-110 transition-all shadow-xl hidden md:block">
+                <i data-lucide="chevron-right"></i>
+            </button>
+
+            <!-- Slider Container -->
+            <div id="eco-slider" class="slider-container px-10 md:px-32">
+                <!-- Widget 1: Visual Logic -->
+                <div class="slider-item">
+                    <div class="liquid-glass p-12 h-[450px] flex flex-col justify-between group">
+                        <div class="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-600 mb-8">
+                            <i data-lucide="eye" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-heading font-black mb-4 group-hover:text-indigo-600 transition-colors">Logika Visual</h3>
+                            <p class="text-slate-500 leading-relaxed">LUMINA menggunakan jaringan saraf deep-learning untuk menerjemahkan data cahaya mentah menjadi nilai matematika estetika.</p>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex items-center gap-4 text-[10px] font-black tracking-widest uppercase text-slate-400">
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Neural Engine</span>
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">AI Optic</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Widget 2: Liquid Motion -->
+                <div class="slider-item">
+                    <div class="liquid-glass p-12 h-[450px] flex flex-col justify-between group">
+                        <div class="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-600 mb-8">
+                            <i data-lucide="wind" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-heading font-black mb-4 group-hover:text-blue-600 transition-colors">Gerakan Fluid</h3>
+                            <p class="text-slate-500 leading-relaxed">Antarmuka kami dirancang untuk bereaksi terhadap kehadiran manusia, meniru perilaku cahaya yang mengenai permukaan cair.</p>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex items-center gap-4 text-[10px] font-black tracking-widest uppercase text-slate-400">
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">UX Fluidity</span>
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Motion DNA</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Widget 3: Global Library -->
+                <div class="slider-item">
+                    <div class="liquid-glass p-12 h-[450px] flex flex-col justify-between group">
+                        <div class="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-600 mb-8">
+                            <i data-lucide="database" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-heading font-black mb-4 group-hover:text-emerald-600 transition-colors">Pustaka Global</h3>
+                            <p class="text-slate-500 leading-relaxed">Akses ekosistem kurasi 25 palet industri yang digunakan oleh studio kreatif tingkat atas di seluruh dunia.</p>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex items-center gap-4 text-[10px] font-black tracking-widest uppercase text-slate-400">
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Data Nodes</span>
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Pro Standards</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Widget 4: Vault Security -->
+                <div class="slider-item">
+                    <div class="liquid-glass p-12 h-[450px] flex flex-col justify-between group">
+                        <div class="w-16 h-16 bg-amber-500/10 rounded-2xl flex items-center justify-center text-amber-600 mb-8">
+                            <i data-lucide="fingerprint" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-heading font-black mb-4 group-hover:text-amber-600 transition-colors">Keamanan Brankas</h3>
+                            <p class="text-slate-500 leading-relaxed">Identitas merek Anda disimpan dalam brankas lokal yang aman, memastikan rahasia kromatik Anda tetap pribadi.</p>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex items-center gap-4 text-[10px] font-black tracking-widest uppercase text-slate-400">
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Encryption</span>
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Vault Logic</span>
+                        </div>
+                    </div>
+                </div>
+                <!-- Widget 5: Future Roadmap -->
+                <div class="slider-item">
+                    <div class="liquid-glass p-12 h-[450px] flex flex-col justify-between group">
+                        <div class="w-16 h-16 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-600 mb-8">
+                            <i data-lucide="rocket" class="w-8 h-8"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-3xl font-heading font-black mb-4 group-hover:text-purple-600 transition-colors">Masa Depan</h3>
+                            <p class="text-slate-500 leading-relaxed">Kami terus mengembangkan integrasi real-time untuk software desain profesional seperti Figma dan Adobe.</p>
+                        </div>
+                        <div class="pt-8 border-t border-slate-100 flex items-center gap-4 text-[10px] font-black tracking-widest uppercase text-slate-400">
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Roadmap</span>
+                            <span class="px-3 py-1 bg-slate-100 rounded-full">Next Gen</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-20 text-center border-t border-slate-100 mt-20">
+        <p class="text-[10px] font-extrabold uppercase tracking-[0.3em] text-slate-400">© 2026 Lumina Global Chromatic Lab. Crafted for High-End Creators.</p>
+    </footer>
+
+    <!-- Modals -->
+    <div id="creator-modal" class="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-xl opacity-0 pointer-events-none transition-all">
+        <div class="liquid-glass w-full max-w-xl p-12 transform scale-95 transition-all !bg-white/90">
+            <h2 class="text-3xl font-heading font-black mb-8">Craft Palette</h2>
+            <div class="space-y-8">
+                <div>
+                    <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 block">Design Name</label>
+                    <input type="text" id="cp-name" placeholder="Misal: Nordic Winter" class="w-full bg-slate-50 border-none rounded-2xl px-6 py-4 focus:ring-2 ring-indigo-500 font-bold text-slate-700 outline-none">
+                </div>
+                <div class="grid grid-cols-4 gap-4 h-40">
+                    <input type="color" id="cp-1" value="#6366f1" class="w-full h-full rounded-2xl cursor-pointer border-none bg-transparent">
+                    <input type="color" id="cp-2" value="#3b82f6" class="w-full h-full rounded-2xl cursor-pointer border-none bg-transparent">
+                    <input type="color" id="cp-3" value="#10b981" class="w-full h-full rounded-2xl cursor-pointer border-none bg-transparent">
+                    <input type="color" id="cp-4" value="#f59e0b" class="w-full h-full rounded-2xl cursor-pointer border-none bg-transparent">
+                </div>
+                <div class="flex gap-4 pt-4">
+                    <button onclick="saveCustomPalette()" class="flex-1 py-5 bg-slate-900 text-white rounded-2xl font-bold hover:bg-indigo-600 transition-all">Save to Vault</button>
+                    <button onclick="closeModal('creator-modal')" class="px-8 py-5 bg-slate-100 text-slate-600 rounded-2xl font-bold">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 z-[200] liquid-glass px-8 py-4 opacity-0 translate-y-10 transition-all duration-500">
+        <div class="flex items-center gap-4">
+            <div id="toast-indicator" class="w-2 h-2 rounded-full bg-indigo-500 animate-ping"></div>
+            <span id="toast-message" class="text-xs font-black uppercase tracking-widest text-slate-700">Copied!</span>
+        </div>
+    </div>
+
+    <script>
+        // API Key Gemini (Setel ke string kosong jika dijalankan di environment lokal Anda)
+        const apiKey = "";
+
+        // Koleksi 25 Palet Pro
+        const curated = [
+            { id: 1, name: "Arctic Mist", colors: ['#f8fafc', '#f1f5f9', '#e2e8f0', '#94a3b8'], names: ['Snow', 'Frost', 'Silver', 'Slate'], mood: 'Minimalist' },
+            { id: 2, name: "Midnight Onyx", colors: ['#020617', '#0f172a', '#1e293b', '#334155'], names: ['Obsidian', 'Night', 'Iron', 'Steel'], mood: 'Professional' },
+            { id: 3, name: "Royal Indigo", colors: ['#312e81', '#4338ca', '#6366f1', '#a5b4fc'], names: ['Deep Sea', 'Imperial', 'Neon', 'Lavender'], mood: 'Creative' },
+            { id: 4, name: "Emerald Glade", colors: ['#064e3b', '#065f46', '#10b981', '#6ee7b7'], names: ['Forest', 'Pine', 'Emerald', 'Mint'], mood: 'Nature' },
+            { id: 5, name: "Volcanic Ash", colors: ['#1c1917', '#44403c', '#78716c', '#d6d3d1'], names: ['Magma', 'Coal', 'Stone', 'Mist'], mood: 'Minimalist' },
+            { id: 6, name: "Golden Hour", colors: ['#451a03', '#92400e', '#d97706', '#fcd34d'], names: ['Amber', 'Bronze', 'Gold', 'Sun'], mood: 'Warm' },
+            { id: 7, name: "Cyber Neon", colors: ['#111827', '#4f46e5', '#ec4899', '#f43f5e'], names: ['Dark', 'Blue', 'Pink', 'Red'], mood: 'Creative' },
+            { id: 8, name: "Oceanic Depth", colors: ['#083344', '#0e7490', '#22d3ee', '#cffafe'], names: ['Abyss', 'Azure', 'Cyan', 'Cloud'], mood: 'Nature' },
+            { id: 9, name: "Rose Quartz", colors: ['#500724', '#9d174d', '#db2777', '#fbcfe8'], names: ['Velvet', 'Ruby', 'Pink', 'Petal'], mood: 'Creative' },
+            { id: 10, name: "Sahara Sand", colors: ['#422006', '#92400e', '#fbbf24', '#fde68a'], names: ['Earth', 'Sienna', 'Sand', 'Silk'], mood: 'Warm' },
+            { id: 11, name: "Nordic Pine", colors: ['#064e3b', '#059669', '#34d399', '#ecfdf5'], names: ['Jungle', 'Jade', 'Algae', 'Air'], mood: 'Nature' },
+            { id: 12, name: "Deep Space", colors: ['#030712', '#111827', '#374151', '#9ca3af'], names: ['Void', 'Galaxy', 'Star', 'Luna'], mood: 'Professional' },
+            { id: 13, name: "Slate Corporate", colors: ['#0f172a', '#1e293b', '#64748b', '#cbd5e1'], names: ['Navy', 'Ink', 'Shadow', 'Ash'], mood: 'Professional' },
+            { id: 14, name: "Cherry Blossom", colors: ['#831843', '#be185d', '#f472b6', '#fff1f2'], names: ['Wine', 'Berry', 'Blush', 'Dew'], mood: 'Creative' },
+            { id: 15, name: "Electric Teal", colors: ['#134e4a', '#0d9488', '#2dd4bf', '#ccfbf1'], names: ['Marine', 'Teal', 'Aqua', 'Glass'], mood: 'Creative' },
+            { id: 16, name: "Sandstone", colors: ['#44403c', '#78716c', '#a8a29e', '#f5f5f4'], names: ['Cliff', 'Pebble', 'Dust', 'Chalk'], mood: 'Minimalist' },
+            { id: 17, name: "Neon Lime", colors: ['#1a2e05', '#4d7c0f', '#84cc16', '#ecfccb'], names: ['Moss', 'Lime', 'Acid', 'Pearl'], mood: 'Vibrant' },
+            { id: 18, name: "Copper Burn", colors: ['#7c2d12', '#ea580c', '#fb923c', '#ffedd5'], names: ['Rust', 'Copper', 'Orange', 'Skin'], mood: 'Warm' },
+            { id: 19, name: "Sky Pulse", colors: ['#1e3a8a', '#1d4ed8', '#60a5fa', '#eff6ff'], names: ['Oxford', 'Sky', 'Clear', 'Ozone'], mood: 'Nature' },
+            { id: 20, name: "Ebony & Ivory", colors: ['#09090b', '#27272a', '#71717a', '#fafafa'], names: ['Coal', 'Zinc', 'Nickel', 'Paper'], mood: 'Minimalist' },
+            { id: 21, name: "Turquoise Wave", colors: ['#164e63', '#0891b2', '#22d3ee', '#ecfeff'], names: ['Deep', 'Pacific', 'Turq', 'Ice'], mood: 'Nature' },
+            { id: 22, name: "Ultraviolet", colors: ['#2e1065', '#5b21b6', '#8b5cf6', '#ede9fe'], names: ['Aura', 'Iris', 'Violet', 'Mist'], mood: 'Creative' },
+            { id: 23, name: "Muted Olive", colors: ['#365314', '#4d7c0f', '#a3e635', '#f7fee7'], names: ['Earth', 'Leaf', 'Stem', 'Ray'], mood: 'Nature' },
+            { id: 24, name: "Crimson Velvet", colors: ['#450a0a', '#991b1b', '#dc2626', '#fef2f2'], names: ['Oxblood', 'Red', 'Fire', 'Rose'], mood: 'Professional' },
+            { id: 25, name: "Graphite Studio", colors: ['#0f172a', '#334155', '#475569', '#f8fafc'], names: ['Black', 'Dark', 'Grey', 'Light'], mood: 'Professional' }
+        ];
+
+        let customVault = [];
+        let currentMood = 'All';
+
+        // Interaktivitas Mouse & Cursor
+        const blobs = [document.getElementById('blob-1'), document.getElementById('blob-2')];
+        const cursorGlow = document.getElementById('cursor-glow');
+        const trail = document.getElementById('cursor-trail');
+
+        document.addEventListener('mousemove', (e) => {
+            const { clientX: x, clientY: y } = e;
+            cursorGlow.style.opacity = '1';
+            cursorGlow.style.left = `${x}px`;
+            cursorGlow.style.top = `${y}px`;
+            trail.style.left = `${x}px`;
+            trail.style.top = `${y}px`;
+            blobs.forEach((b, i) => {
+                const shift = (i + 1) * 20;
+                b.style.transform = `translate(${x/shift}px, ${y/shift}px)`;
+            });
+        });
+
+        // Navigasi Slider
+        const scrollSlider = (direction) => {
+            const slider = document.getElementById('eco-slider');
+            const scrollAmount = 400;
+            if (direction === 'left') {
+                slider.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+            } else {
+                slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+            }
+        };
+
+        // UI Handlers
+        const openModal = (id) => document.getElementById(id).classList.add('modal-active');
+        const closeModal = (id) => document.getElementById(id).classList.remove('modal-active');
+
+        const saveCustomPalette = () => {
+            const name = document.getElementById('cp-name').value || "Unnamed Identity";
+            const colors = [
+                document.getElementById('cp-1').value,
+                document.getElementById('cp-2').value,
+                document.getElementById('cp-3').value,
+                document.getElementById('cp-4').value
+            ];
+            customVault.unshift({ id: Date.now(), name, colors, names: ['Custom', 'Custom', 'Custom', 'Custom'], mood: 'User' });
+            renderVault();
+            closeModal('creator-modal');
+            showToast(`Berhasil Disimpan: ${name}`, colors[0]);
+        };
+
+        // Renderers (Sistem Kartu)
+        const createCard = (p) => `
+            <div class="liquid-glass p-3 flex flex-col h-[380px] group">
+                <div class="flex-1 flex flex-col gap-2 mb-4">
+                    <div class="flex-1 flex gap-2">
+                        <div class="color-block flex-1 rounded-2xl cursor-pointer transition-all hover:flex-[2] relative overflow-hidden" 
+                             style="background:${p.colors[0]}" data-name="${p.names[0]}" onclick="copy('${p.colors[0]}')"></div>
+                        <div class="color-block flex-1 rounded-2xl cursor-pointer transition-all hover:flex-[2] relative overflow-hidden" 
+                             style="background:${p.colors[1]}" data-name="${p.names[1]}" onclick="copy('${p.colors[1]}')"></div>
+                    </div>
+                    <div class="flex-1 flex gap-2">
+                        <div class="color-block flex-1 rounded-2xl cursor-pointer transition-all hover:flex-[2] relative overflow-hidden" 
+                             style="background:${p.colors[2]}" data-name="${p.names[2]}" onclick="copy('${p.colors[2]}')"></div>
+                        <div class="color-block flex-1 rounded-2xl cursor-pointer transition-all hover:flex-[2] relative overflow-hidden" 
+                             style="background:${p.colors[3]}" data-name="${p.names[3]}" onclick="copy('${p.colors[3]}')"></div>
+                    </div>
+                </div>
+                <div class="px-4 py-2 border-t border-slate-50 flex items-center justify-between">
+                    <div>
+                        <h4 class="text-sm font-black text-slate-800 tracking-tight">${p.name}</h4>
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400">${p.mood}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="p-2 text-slate-200 hover:text-indigo-500 transition-colors"><i data-lucide="shield-check" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const renderLibrary = () => {
+            const grid = document.getElementById('palette-grid');
+            const filtered = curated.filter(p => currentMood === 'All' || p.mood === currentMood);
+            grid.innerHTML = filtered.map(p => createCard(p)).join('');
+            lucide.createIcons();
+        };
+
+        const renderVault = () => {
+            document.getElementById('my-palettes-grid').innerHTML = customVault.map(p => createCard(p)).join('');
+            lucide.createIcons();
+        };
+
+        const renderMoods = () => {
+            const moods = ['All', 'Minimalist', 'Creative', 'Professional', 'Nature', 'Warm'];
+            document.getElementById('mood-filters').innerHTML = moods.map(m => `
+                <button onclick="setMood('${m}')" class="px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentMood === m ? 'bg-slate-900 text-white shadow-xl' : 'liquid-glass text-slate-400 hover:text-indigo-600'}">${m}</button>
+            `).join('');
+        };
+
+        window.setMood = (m) => { currentMood = m; renderMoods(); renderLibrary(); };
+
+        // Sistem AI Vision Engine
+        const aiUpload = document.getElementById('ai-upload');
+        const dropZone = document.getElementById('drop-zone');
+
+        dropZone.onclick = () => aiUpload.click();
+        aiUpload.onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                document.getElementById('drop-content').innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover">`;
+                processAI(ev.target.result.split(',')[1]);
+            };
+            reader.readAsDataURL(file);
+        };
+
+        async function processAI(base64) {
+            const placeholder = document.getElementById('ai-placeholder');
+            const content = document.getElementById('ai-content');
+            placeholder.innerHTML = `<div class="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest">Neural Analysis Active...</p>`;
+            
+            const prompt = "Analyze the dominant colors from this image. Provide 4 professional aesthetic HEX codes. Write 2 sentences in English about the psychological mood. Use JSON: { \"colors\": [\"#hex1\", \"#hex2\", \"#hex3\", \"#hex4\"], \"explanation\": \"...\" }";
+
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: "image/png", data: base64 } }] }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+                const data = await response.json();
+                const result = JSON.parse(data.candidates[0].content.parts[0].text);
+                
+                placeholder.classList.add('hidden');
+                content.classList.remove('hidden');
+                document.getElementById('ai-explanation').textContent = result.explanation;
+                document.getElementById('ai-palette-result').innerHTML = result.colors.map(c => `<div style="background:${c}; flex:1;" onclick="copy('${c}')"></div>`).join('');
+                showToast("Analisis AI Selesai", "#10b981");
+            } catch (err) {
+                placeholder.textContent = "Koneksi AI Terputus.";
+            }
+        }
+
+        const copy = (c) => {
+            const el = document.createElement('textarea'); el.value = c; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+            showToast(`Disalin: ${c.toUpperCase()}`, c);
+        };
+
+        const showToast = (msg, color) => {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-message').textContent = msg;
+            document.getElementById('toast-indicator').style.backgroundColor = color;
+            t.classList.add('opacity-100', 'translate-y-0');
+            setTimeout(() => t.classList.remove('opacity-100', 'translate-y-0'), 3000);
+        };
+
+        // Inisialisasi Saat Halaman Dimuat
+        window.onload = () => { 
+            renderMoods(); 
+            renderLibrary(); 
+            lucide.createIcons(); 
+        };
+    </script>
+</body>
+</html>
